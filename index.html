@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-adsense-account" content="ca-pub-1360921460022209">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1360921460022209"
+     crossorigin="anonymous"></script>
+<title>Macro Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg-0:#FFFFFF;
+    --bg-1:#F7F8FA;
+    --bg-2:#EFF1F4;
+    --border:#E3E6EA;
+    --text-0:#14171A;
+    --text-1:#5B6572;
+    --text-2:#96A0AC;
+    --neon:#2F6FED;
+    --neon-dim:rgba(47,111,237,0.10);
+    --up:#1AA260;
+    --down:#E0435C;
+    --warn:#E0A60E;
+    --warn-dim:rgba(224,166,14,0.16);
+    --warn-text:#8A6D0B;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Malgun Gothic", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg-0);color:var(--text-0);font-family:var(--font-ui);height:100%;}
+  body{display:flex;flex-direction:column;min-height:100vh;}
+
+  /* ---- Top bar ---- */
+  .topbar{
+    display:flex;align-items:center;gap:20px;
+    padding:14px 24px;
+    background:var(--bg-1);
+    border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:20;
+  }
+  .home-btn{
+    display:flex;align-items:center;gap:8px;
+    background:transparent;border:1px solid var(--border);
+    color:var(--text-1);
+    padding:8px 14px;border-radius:6px;
+    font-family:var(--font-ui);font-size:13px;font-weight:600;
+    cursor:pointer;transition:border-color .15s ease, color .15s ease;
+  }
+  .home-btn:hover{border-color:var(--text-1);color:var(--text-0);}
+  .home-btn svg{width:14px;height:14px;stroke:currentColor;}
+
+  .topbar-divider{width:1px;height:22px;background:var(--border);}
+
+  .icon-tabs{display:flex;gap:10px;flex:1;}
+  .icon-tab{
+    display:flex;align-items:center;gap:8px;
+    padding:8px 16px;border-radius:6px;
+    border:1px solid var(--border);
+    background:var(--bg-2);
+    color:var(--text-1);
+    font-size:13px;font-weight:600;
+    cursor:pointer;
+    transition:all .15s ease;
+    white-space:nowrap;
+  }
+  .icon-tab .dot{width:7px;height:7px;border-radius:50%;background:var(--text-2);flex-shrink:0;}
+  .icon-tab:hover{color:var(--text-0);border-color:var(--text-1);}
+  .icon-tab.active{
+    color:var(--neon);
+    border-color:var(--neon);
+    background:var(--neon-dim);
+    box-shadow:0 0 10px rgba(47,111,237,0.15);
+  }
+  .icon-tab.active .dot{background:var(--neon);box-shadow:0 0 5px rgba(47,111,237,0.4);}
+
+  .category-label{
+    font-size:12px;color:var(--text-2);font-weight:600;
+    letter-spacing:.02em;
+    padding-right:4px;
+    white-space:nowrap;
+  }
+
+  .bg-status{
+    margin-left:auto;font-size:11px;color:var(--text-2);
+    white-space:nowrap;display:flex;align-items:center;gap:6px;
+  }
+  .bg-status .pulse{
+    width:6px;height:6px;border-radius:50%;background:var(--neon);
+    animation:pulse 1s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:.3;}50%{opacity:1;}}
+
+  /* ---- Body layout ---- */
+  .layout{display:flex;flex:1;min-height:0;}
+
+  .sidebar{
+    width:180px;flex-shrink:0;
+    background:var(--bg-1);
+    border-right:1px solid var(--border);
+    padding:18px 10px;
+  }
+  .nav-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:11px 12px;margin-bottom:4px;border-radius:6px;
+    color:var(--text-1);font-size:14px;font-weight:600;
+    cursor:pointer;transition:background .15s ease, color .15s ease;
+  }
+  .nav-item:hover{background:var(--bg-2);color:var(--text-0);}
+  .nav-item.active{background:var(--bg-2);color:var(--text-0);}
+  .nav-item.active .nav-bar{opacity:1;}
+  .nav-bar{width:3px;height:16px;background:var(--neon);border-radius:2px;opacity:0;}
+
+  .main{flex:1;padding:26px 32px 60px;overflow-y:auto;min-width:0;}
+
+  .section-heading{
+    font-size:20px;font-weight:700;margin:0 0 4px;
+  }
+  .section-sub{
+    font-size:13px;color:var(--text-1);margin:0 0 6px;
+  }
+  .source-note{
+    font-size:11px;color:var(--text-2);margin:0 0 20px;line-height:1.6;
+  }
+
+  /* ---- Summary table ---- */
+  table.summary{
+    width:100%;border-collapse:collapse;
+    background:var(--bg-1);border:1px solid var(--border);border-radius:8px;
+    overflow:hidden;margin-bottom:24px;
+    table-layout:fixed;
+  }
+  table.summary th{
+    text-align:left;font-size:11px;color:var(--text-2);font-weight:700;
+    padding:12px 16px;border-bottom:1px solid var(--border);
+    background:var(--bg-2);
+  }
+  table.summary th:nth-child(1),
+  table.summary td:nth-child(1){width:40%;}
+  table.summary th:nth-child(2),
+  table.summary td:nth-child(2){width:30%;}
+  table.summary th:nth-child(3),
+  table.summary td:nth-child(3){width:30%;}
+  table.summary td{
+    padding:14px 16px;border-bottom:1px solid var(--border);
+    font-size:14px;
+  }
+  table.summary tr:last-child td{border-bottom:none;}
+  table.summary tr{cursor:pointer;transition:background .15s ease;}
+  table.summary tr:hover td{background:rgba(255,255,255,0.02);}
+  table.summary tr.selected td{background:var(--neon-dim);}
+  .item-name{
+    font-weight:700;color:var(--text-0);
+    display:flex;align-items:center;gap:6px;
+    white-space:nowrap;word-break:keep-all;
+  }
+  .item-value{font-family:var(--font-mono);font-size:15px;font-weight:600;white-space:nowrap;}
+  .value-chip{display:inline-block;padding:2px 9px;border-radius:5px;white-space:nowrap;}
+  .value-chip.normal{background:var(--neon-dim);color:var(--neon);}
+  .value-chip.abnormal{background:rgba(224,166,14,0.16);color:var(--warn-text);}
+  .item-change{font-family:var(--font-mono);font-size:13px;font-weight:600;white-space:nowrap;}
+  .item-change.up{color:var(--up);}
+  .item-change.down{color:var(--down);}
+  .item-change .arrow{margin-right:3px;}
+  .src-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .src-dot.live{background:var(--up);box-shadow:0 0 5px var(--up);}
+  .src-dot.mock{background:var(--text-2);}
+  .loading-inline{color:var(--text-2);font-style:italic;}
+
+  /* ---- Detail panel ---- */
+  .detail{
+    background:var(--bg-1);border:1px solid var(--border);border-radius:8px;
+    padding:24px 26px;
+  }
+  .detail-header{
+    display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap;
+  }
+  .detail-name{font-size:17px;font-weight:700;color:var(--neon);}
+  .detail-value{font-family:var(--font-mono);font-size:15px;color:var(--text-1);}
+  .live-badge{
+    font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;
+    border:1px solid var(--border);white-space:nowrap;
+  }
+  .live-badge.live{color:var(--up);border-color:var(--up);}
+  .live-badge.mock{color:var(--text-2);}
+  .updated-at{font-size:11px;color:var(--text-2);margin-bottom:18px;}
+
+  .detail-block{margin-bottom:20px;}
+  .detail-block-title{
+    font-size:11px;color:var(--neon);font-weight:700;letter-spacing:.03em;
+    margin-bottom:8px;text-transform:uppercase;
+  }
+  .detail-block-title.alt{color:var(--text-1);}
+  .detail-desc{
+    font-size:14px;line-height:1.75;color:var(--text-1);
+    margin:0;max-width:72ch;
+  }
+
+  .chart-label{font-size:11px;color:var(--text-2);font-weight:700;margin-bottom:10px;}
+  .chart-wrap{
+    background:var(--bg-0);border:1px solid var(--border);border-radius:6px;
+    padding:16px 12px 8px;height:320px;position:relative;
+  }
+  .chart-wrap canvas{width:100%!important;height:100%!important;}
+  .chart-legend{display:flex;gap:16px;align-items:center;margin-top:8px;font-size:11px;color:var(--text-1);}
+  .chart-legend .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle;}
+
+  /* ---- Chart + interpretation (vertical: chart → guide → history) ---- */
+  .chart-interpret-row{display:flex;flex-direction:column;gap:18px;margin-bottom:20px;}
+  .chart-col{width:100%;min-width:0;}
+  .interpret-col{
+    width:100%;
+    background:var(--bg-2);border:1px solid var(--border);border-radius:6px;
+    padding:14px 16px;
+  }
+  .interpret-col .detail-block-title{margin-bottom:8px;}
+  .interpret-col .detail-desc{font-size:13px;line-height:1.65;}
+
+  .history-section{margin-top:4px;}
+  .history-section .detail-block-title{margin-bottom:10px;}
+  table.history{
+    width:100%;border-collapse:collapse;
+    background:var(--bg-0);border:1px solid var(--border);border-radius:6px;
+    overflow:hidden;font-size:13px;
+    table-layout:fixed;
+  }
+  table.history th{
+    text-align:left;font-size:11px;color:var(--text-2);font-weight:700;
+    padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg-2);
+  }
+  table.history td{
+    padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px;
+  }
+  table.history:not(.rate-hist) th:nth-child(1),
+  table.history:not(.rate-hist) td:nth-child(1){width:34%;}
+  table.history:not(.rate-hist) th:nth-child(2),
+  table.history:not(.rate-hist) td:nth-child(2){width:33%;}
+  table.history:not(.rate-hist) th:nth-child(3),
+  table.history:not(.rate-hist) td:nth-child(3){width:33%;}
+  table.history.rate-hist th:nth-child(1),
+  table.history.rate-hist td:nth-child(1){width:28%;}
+  table.history.rate-hist th:nth-child(2),
+  table.history.rate-hist td:nth-child(2){width:24%;}
+  table.history.rate-hist th:nth-child(3),
+  table.history.rate-hist td:nth-child(3){width:24%;}
+  table.history.rate-hist th:nth-child(4),
+  table.history.rate-hist td:nth-child(4){width:24%;}
+  table.history tr:last-child td{border-bottom:none;}
+  table.history tr:hover td{background:rgba(47,111,237,0.04);}
+  table.history .hist-period{font-weight:600;color:var(--text-0);}
+  table.history .hist-val{font-family:var(--font-mono);font-weight:600;}
+  table.history .hist-chg{font-family:var(--font-mono);font-size:12px;font-weight:600;}
+  table.history .hist-chg.up{color:var(--up);}
+  table.history .hist-chg.down{color:var(--down);}
+  .history-scroll{max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;}
+
+  .chart-click-hint{font-size:11px;color:var(--text-2);margin-top:6px;}
+
+  .footer-note{
+    font-size:11px;color:var(--text-2);margin-top:24px;line-height:1.6;
+  }
+
+  /* ---- Home / Landing (summary) view ---- */
+  .home-cat{margin-bottom:26px;}
+  .home-cat-title{font-size:14px;font-weight:700;color:var(--text-0);margin:0 0 10px;}
+
+  @media (max-width: 720px){
+    .topbar{
+      flex-wrap:wrap;gap:10px;padding:10px 12px;
+    }
+    .topbar-divider{display:none;}
+    .category-label{display:none;}
+    .icon-tabs{
+      flex:1 1 100%;order:3;
+      overflow-x:auto;-webkit-overflow-scrolling:touch;
+      gap:6px;padding-bottom:2px;
+      scrollbar-width:none;
+    }
+    .icon-tabs::-webkit-scrollbar{display:none;}
+    .icon-tab{padding:7px 12px;font-size:12px;flex-shrink:0;}
+    .bg-status{display:none;}
+    .home-btn{padding:7px 12px;font-size:12px;}
+
+    .layout{flex-direction:column;}
+    .sidebar{
+      width:100%;display:flex;flex-direction:row;
+      padding:8px 12px;gap:6px;
+      overflow-x:auto;-webkit-overflow-scrolling:touch;
+      border-right:none;border-bottom:1px solid var(--border);
+      scrollbar-width:none;
+      background:var(--bg-1);
+    }
+    .sidebar::-webkit-scrollbar{display:none;}
+    .nav-item{
+      white-space:nowrap;margin-bottom:0;flex-shrink:0;
+      padding:8px 14px;border-radius:20px;
+      border:1px solid var(--border);
+      background:var(--bg-2);
+      font-size:13px;
+    }
+    .nav-item .nav-bar{display:none;}
+    .nav-item.active{
+      color:var(--neon);
+      border-color:var(--neon);
+      background:var(--neon-dim);
+      box-shadow:0 0 8px rgba(47,111,237,0.12);
+    }
+    .main{padding:16px 12px 40px;}
+
+    /* Table: prevent vertical text break + horizontal scroll */
+    table.summary{
+      table-layout:auto;
+      min-width:320px;
+    }
+    table.summary th:nth-child(1),
+    table.summary td:nth-child(1),
+    table.summary th:nth-child(2),
+    table.summary td:nth-child(2),
+    table.summary th:nth-child(3),
+    table.summary td:nth-child(3){width:auto;}
+    table.summary td, table.summary th{padding:10px 12px;vertical-align:middle;}
+    .item-name{font-size:13px;}
+    .item-value{font-size:13px;}
+    .item-change{font-size:12px;}
+    .value-chip{padding:2px 7px;font-size:12px;}
+
+    /* Horizontal scroll when summary tables are narrow */
+    .home-cat, #categorySection > table.summary{
+      overflow-x:auto;-webkit-overflow-scrolling:touch;
+      display:block;
+    }
+    #categorySection > table.summary{width:100%;}
+    .section-heading{font-size:18px;}
+    .detail{padding:16px 14px;}
+    .chart-wrap{height:260px;padding:12px 8px 6px;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <button class="home-btn" onclick="goHome()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      Home
+    </button>
+    <div class="topbar-divider"></div>
+    <span class="category-label" id="categoryLabel"></span>
+    <div class="icon-tabs" id="iconTabs"></div>
+    <span class="bg-status" id="bgStatus"></span>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div class="nav-item" data-cat="rate" onclick="showCategory('rate')"><span><span class="nav-bar"></span> Policy Rate</span></div>
+      <div class="nav-item" data-cat="inflation" onclick="showCategory('inflation')"><span><span class="nav-bar"></span> Inflation</span></div>
+      <div class="nav-item" data-cat="employment" onclick="showCategory('employment')"><span><span class="nav-bar"></span> Employment</span></div>
+      <div class="nav-item" data-cat="bond" onclick="showCategory('bond')"><span><span class="nav-bar"></span> Treasuries</span></div>
+      <div class="nav-item" data-cat="commodity" onclick="showCategory('commodity')"><span><span class="nav-bar"></span> Commodities</span></div>
+      <div class="nav-item" data-cat="market" onclick="showCategory('market')"><span><span class="nav-bar"></span> Market Indicators</span></div>
+    </div>
+
+    <div class="main">
+
+      <!-- ===== 1) Landing (summary) view: shown on first entry ===== -->
+      <div id="landingSection">
+        <h1 class="section-heading">Economic Indicators Summary</h1>
+        <p class="section-sub">Latest figures by category — click a row for the interpretation guide.</p>
+        <p class="source-note">※ Figures are pre-fetched daily by the server (GitHub Actions). Treasuries and commodities come from Yahoo Finance; price indexes from FRED (St. Louis Fed). Items that fail to load are shown with sample data (⚪).</p>
+        <div id="landingBody"></div>
+      </div>
+
+      <!-- ===== 2) Home (summary) view: shown when Home is clicked ===== -->
+      <div id="homeSection" style="display:none;">
+        <h1 class="section-heading">Full Summary</h1>
+        <p class="section-sub">Latest figures by category — click a row for the interpretation guide.</p>
+        <div id="homeBody"></div>
+      </div>
+
+      <!-- ===== 3) Category view: shown when a sidebar item is selected ===== -->
+      <div id="categorySection" style="display:none;">
+        <h1 class="section-heading" id="mainHeading">CPI</h1>
+        <p class="section-sub" id="mainSub">Consumer price index — change vs prior period</p>
+
+        <table class="summary">
+          <thead>
+            <tr><th>Item</th><th>Current</th><th>vs Prior</th></tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+
+        <div class="detail">
+          <div class="detail-header">
+            <span class="detail-name" id="detailName"></span>
+            <span class="detail-value" id="detailValue"></span>
+            <span class="live-badge" id="liveBadge"></span>
+          </div>
+          <div class="updated-at" id="updatedAt"></div>
+
+          <div id="chartSection" class="chart-interpret-row">
+            <div class="chart-col">
+              <div class="chart-label" id="chartLabel">Recent trend</div>
+              <div class="chart-wrap" id="chartWrap">
+                <canvas id="chartCanvas"></canvas>
+              </div>
+              <p class="chart-click-hint">Hover the chart to see the value at that point. Light blue = at or above threshold; light gold = below. Red dashed line is the reference.</p>
+            </div>
+            <div class="interpret-col">
+              <div class="detail-block-title alt">Interpretation Guide</div>
+              <p class="detail-desc" id="detailInterpret"></p>
+            </div>
+            <div class="history-section" id="historySection">
+              <div class="detail-block-title alt" id="historyTitle">Decision History / Recent Path</div>
+              <div class="history-scroll">
+                <table class="history">
+                  <thead id="historyHead"></thead>
+                  <tbody id="historyBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <p class="footer-note">Figures on this dashboard are for informational purposes only and are not investment advice. Please verify original sources (FRED, Yahoo Finance, etc.) before making decisions.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/* =========================================================
+   1) Seeded RNG — fallback sample series when API/fetch fails
+   ========================================================= */
+function seededRandom(seed){
+  let s = seed;
+  return function(){
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+}
+function genSeries(seed, start, driftPerStep, volatility, months){
+  const rnd = seededRandom(seed);
+  const arr = [];
+  let v = start;
+  for(let i=0;i<months;i++){
+    v += driftPerStep + (rnd()-0.5)*volatility;
+    arr.push(Math.round(v*100)/100);
+  }
+  return arr;
+}
+const MONTHS = 36; // ~3 years monthly — chart/history show last 30
+
+/* =========================================================
+   2) Data source: single precomputed file written daily by the server
+      (GitHub Actions) — data/indicators.json
+      (script: scripts/fetch_indicators.py,
+       workflow: .github/workflows/update-indicators.yml)
+   ========================================================= */
+const DATA_URL = "./data/indicators.json";
+
+async function fetchPrecomputedData(){
+  const res = await fetch(DATA_URL, { cache: "no-store" });
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+/* =========================================================
+   3) Indicator definitions — concept / interpretation / fallback
+   ========================================================= */
+const DATA = {
+  rate: {
+    label: "Policy Rate",
+    sub: "Fed policy rate — recent easing cycle overview",
+    items: [
+      {
+        id:"fedfunds", name:"Fed Funds Rate (upper)", unit:"%",
+        concept:"The upper bound of the Federal Reserve's target range for the federal funds rate. It anchors overnight interbank lending and is the starting point for market rates (Treasuries, corporates, mortgages, etc.).",
+        interpret:"A hold at elevated levels signals ongoing restrictive policy. Rate cuts indicate the Fed is easing in response to slower growth or cooler inflation. Faster cuts can also reflect greater concern about the economy.",
+        threshold: 5, direction: "above",
+        fallback: () => genSeries(11, 0.5, 0.028, 0.15, MONTHS)
+      }
+    
+    ]
+  },
+  inflation: {
+    label: "Inflation",
+    sub: "CPI · PCE · PPI — consumer, PCE, and producer prices",
+    items: [
+      {
+        id:"us_cpi", name:"U.S. CPI (YoY)", unit:"%",
+        concept:"Year-over-year change in the Consumer Price Index published monthly by the U.S. Bureau of Labor Statistics. It tracks average price changes across a basket (food, energy, shelter, medical care, etc.) and is one of the key inputs to Fed policy.",
+        interpret:"The Fed's longer-run inflation goal is 2%. Readings in the low-2% area are seen as close to target and support rate-cut expectations; above 3% often implies a longer hold. Above 4% signals strong inflation pressure and raises the risk of further tightening or higher-for-longer rates.",
+        threshold: 2, direction: "above",
+        fallback: () => genSeries(3, 3.7, -0.005, 0.35, MONTHS)
+      },
+      {
+        id:"core_cpi", name:"Core CPI (YoY)", unit:"%",
+        concept:"CPI excluding food and energy, which are highly volatile. By stripping transient noise it shows underlying inflation and is often weighted more heavily than headline CPI in policy decisions.",
+        interpret:"Core CPI above 3% points to persistent structural inflation and can delay Fed cuts. A settle into the 2% range is often read as a signal that policy can pivot toward easing.",
+        threshold: 3, direction: "above",
+        fallback: () => genSeries(23, 3.8, -0.012, 0.12, MONTHS)
+      }
+    ,
+      {
+        id:"pce_headline", name:"Headline PCE (YoY)", unit:"%",
+        concept:"Year-over-year change in the Personal Consumption Expenditures price index from the BEA. It uses a broader basket than CPI and accounts for substitution in spending; it is the Fed's official 2% inflation target metric.",
+        interpret:"The Fed's target is 2%. Above 3% keeps restrictive policy more likely; a move into the low-2% area strengthens the case for cuts. Readings above 4% are a warning of re-accelerating inflation.",
+        threshold: 2, direction: "above",
+        fallback: () => genSeries(17, 2.6, 0.009, 0.25, MONTHS)
+      },
+      {
+        id:"pce_core", name:"Core PCE (YoY)", unit:"%",
+        concept:"PCE excluding food and energy — often cited as the single most important inflation gauge for Fed policy. It filters short-term noise to show underlying price pressure.",
+        interpret:"Core PCE above 3% means structural inflation is still elevated and cuts may be delayed; a move into the 2% range is frequently taken as a policy-pivot signal.",
+        threshold: 3, direction: "above",
+        fallback: () => genSeries(43, 2.8, 0.004, 0.2, MONTHS)
+      }
+    ,
+      {
+        id:"ppi_headline", name:"Headline PPI (YoY)", unit:"%",
+        concept:"Year-over-year change in the Producer Price Index (final demand) from BLS. It measures prices received by producers and often leads CPI by a few months.",
+        interpret:"PPI rising faster than CPI suggests cost pressure may pass through to consumers. Above 4% points to strong wholesale inflation and elevates the risk of higher CPI ahead.",
+        threshold: 4, direction: "above",
+        fallback: () => genSeries(47, 2.4, 0.019, 0.3, MONTHS)
+      },
+      {
+        id:"ppi_core", name:"Core PPI (YoY)", unit:"%",
+        concept:"PPI excluding food and energy — shows underlying wholesale price pressure and structural manufacturing/distribution cost trends without commodity noise.",
+        interpret:"Core PPI rising faster than headline implies broad cost pressure, not one-off factors — watch for margin squeeze or pass-through to consumer prices.",
+        threshold: 4, direction: "above",
+        fallback: () => genSeries(59, 2.6, 0.0175, 0.3, MONTHS)
+      }
+    
+    ]
+  },
+  employment: {
+    label: "Employment",
+    sub: "U.S. employment — NFP, unemployment, wages, participation",
+    items: [
+      {
+        id:"nfp", name:"Nonfarm Payrolls Change", unit:"K",
+        concept:"Monthly change in nonfarm payrolls (thousands) from BLS — the primary high-frequency gauge of U.S. labor-market health.",
+        interpret:"Gains of roughly 150k–200k are seen as solid. Much weaker or negative prints raise slowdown/recession concerns; very strong gains can signal overheating and inflation pressure.",
+        threshold: 150, direction: "below",
+        fallback: () => genSeries(67, 180, 0, 90, MONTHS)
+      },
+      {
+        id:"urate", name:"Unemployment Rate", unit:"%",
+        concept:"Share of the labor force that is jobless. Central to the Fed's maximum-employment mandate and typically judged against a natural rate near 4%.",
+        interpret:"Low-4% readings are consistent with full employment. A sustained rise signals cooling or recession risk; very low rates can fuel wage-driven inflation.",
+        threshold: 4.5, direction: "above",
+        fallback: () => genSeries(71, 4.4, -0.002, 0.15, MONTHS)
+      },
+      {
+        id:"earnings", name:"Avg Hourly Earnings (YoY)", unit:"%",
+        concept:"Year-over-year growth in average hourly earnings for private-sector workers — a key measure of wage-driven inflation pressure.",
+        interpret:"Mid-3% or higher can add to price pressure; a decline toward or below 3% eases concerns about a wage-price spiral.",
+        threshold: 3.5, direction: "above",
+        fallback: () => genSeries(73, 3.6, -0.0025, 0.15, MONTHS)
+      },
+      {
+        id:"participation", name:"Labor Force Participation", unit:"%",
+        concept:"Share of the working-age population that is employed or actively seeking work. Falling participation can make the unemployment rate look better than the true labor-market strength.",
+        interpret:"A steady drop implies more people leaving the labor force, so unemployment gains may be partly illusory. A rebound is a healthier sign of renewed job-seeking.",
+        threshold: 62, direction: "below",
+        fallback: () => genSeries(79, 63.0, -0.009, 0.15, MONTHS)
+      }
+    ]
+  },
+  bond: {
+    label: "Treasuries",
+    sub: "Major Treasury yields — change vs prior",
+    items: [
+      {
+        id:"us10y", name:"U.S. 10-Year", unit:"%",
+        concept:"Yield on the 10-year U.S. Treasury — the global benchmark long rate and a direct input to valuations of equities, real estate, and other long-duration assets.",
+        interpret:"Above 4% is a relatively high-rate regime that weighs on growth stocks and property. A move into the 3% range often reflects expectations of cuts or slower growth.",
+        threshold: 4, direction: "above",
+        fallback: () => genSeries(5, 4.1, 0.006, 0.09, MONTHS)
+      },
+      {
+        id:"us2y", name:"U.S. 2-Year", unit:"%",
+        concept:"Treasury yield most sensitive to the expected Fed path over the next 1–2 years. The 2s10s spread is a classic recession leading indicator.",
+        interpret:"A sustained inversion (2y > 10y) signals markets pricing recession risk. A turn lower in the 2-year itself often means markets are pricing in a Fed easing cycle.",
+        threshold: 4.5, direction: "above",
+        fallback: () => genSeries(19, 4.6, 0.002, 0.11, MONTHS)
+      }
+    ]
+  },
+  commodity: {
+    label: "Commodities",
+    sub: "Major commodity prices — change vs prior",
+    items: [
+      {
+        id:"wti", name:"WTI Crude", unit:"$/bbl",
+        concept:"West Texas Intermediate futures — the North American crude benchmark. Sensitive to geopolitics and OPEC+ decisions, and feeds into broader inflation via energy costs.",
+        interpret:"Above $80/bbl often reflects inflation re-acceleration or supply-disruption risk; below $60 is more consistent with demand weakness or oversupply.",
+        threshold: {low:60, high:80}, direction: "range",
+        fallback: () => genSeries(7, 78, 0.05, 2.4, MONTHS)
+      },
+      {
+        id:"gold", name:"Gold", unit:"$/oz",
+        concept:"Classic safe-haven asset that tends to move inversely with real rates (nominal rates minus inflation). Demand rises when currency or geopolitical uncertainty increases.",
+        interpret:"New highs and sustained gains signal strong safe-haven demand, often with falling real rates, a weaker dollar, or geopolitical stress. Stalling or falling gold with rising real rates points to risk-on sentiment.",
+        threshold: 2500, direction: "above",
+        fallback: () => genSeries(13, 2000, 8.5, 28, MONTHS)
+      },
+      {
+        id:"copper", name:"Copper", unit:"$/lb",
+        concept:"Widely used in construction, power grids, and electronics — nicknamed 'Dr. Copper' as a leading gauge of global growth. EV and renewable infrastructure demand are increasingly important.",
+        interpret:"Rising copper often signals manufacturing/construction recovery and stronger physical demand; falling prices more often reflect global slowdown or weaker demand from China and other major consumers.",
+        threshold: 4.5, direction: "above",
+        fallback: () => genSeries(29, 3.8, 0.006, 0.1, MONTHS)
+      }
+    ]
+  },
+  market: {
+    label: "Market Indicators",
+    sub: "S&P 500 · Nasdaq 100 · Nasdaq RSI · Bitcoin · Buffett Indicator — valuation & sentiment",
+    items: [
+      {
+        id:"sp500", name:"S&P 500", unit:"",
+        concept:"Market-cap-weighted index of 500 large U.S. stocks — the primary benchmark for the U.S. equity market.",
+        interpret:"A sustained uptrend reflects optimism on growth and earnings; sharp drops or long sideways moves often signal slower growth, valuation pressure, or risk-off sentiment. Trend, volatility, and co-movement with rates and inflation matter more than the level alone.",
+        threshold: 5000, direction: "above",
+        fallback: () => genSeries(83, 4800, 25, 80, MONTHS)
+      },
+      {
+        id:"nasdaq100", name:"Nasdaq 100", unit:"",
+        concept:"Index of 100 large non-financial tech and growth stocks listed on Nasdaq. It tracks big tech and semiconductors and is more volatile and growth-sensitive than the S&P 500.",
+        interpret:"Outperformance vs the S&P 500 signals a growth/tech preference, often with cut expectations or strong earnings. Persistent underperformance can reflect valuation stress or rising-rate pressure.",
+        threshold: 18000, direction: "above",
+        fallback: () => genSeries(89, 16500, 80, 280, MONTHS)
+      },
+      {
+        id:"nasdaq_rsi", name:"Nasdaq RSI (14-day)", unit:"",
+        concept:"14-day Relative Strength Index of the Nasdaq Composite — a short-term momentum gauge scaled 0–100 from recent up vs down moves.",
+        interpret:"Above 70 is short-term overbought (watch for pullbacks); below 30 is oversold (technical bounce risk). 40–60 is broadly neutral.",
+        threshold: {low:30, high:70}, direction: "range",
+        fallback: () => genSeries(53, 52, 0, 9, MONTHS)
+      },
+      {
+        id:"btc", name:"Bitcoin", unit:"$",
+        concept:"Bitcoin spot price in USD. Sensitive to liquidity, risk appetite, and regulation; institutional flows (e.g. spot Bitcoin ETFs) have become increasingly important.",
+        interpret:"Sharp rallies often track broader risk-on sentiment and easier liquidity; sharp drops can reflect deleveraging, regulatory risk, or risk-off. Volatility is much higher than traditional assets, so interpret with extra caution.",
+        threshold: 100000, direction: "above",
+        fallback: () => genSeries(61, 65000, 350, 4200, MONTHS)
+      },
+      {
+        id:"buffett", name:"Buffett Indicator", unit:"%",
+        concept:"Total U.S. equity market cap (often approximated by the Wilshire 5000) divided by nominal GDP — popularized by Warren Buffett as a broad market valuation gauge.",
+        interpret:"Rough guide: 70–90% undervalued, 90–120% fair, 120–150% somewhat rich, 150%+ historically associated with bubble-like regimes. Post low-rate era, the baseline may have shifted higher — trend vs history often matters more than the level alone.",
+        threshold: 150, direction: "above",
+        fallback: () => genSeries(41, 195, 0.15, 3.5, MONTHS)
+      }
+    ]
+  }
+};
+
+let currentView = "landing";   // 'landing' | 'home' | 'category'
+let currentCategory = "inflation";
+let currentItemId = null;
+let loadedCount = 0;
+let totalCount = 0;
+
+function hasData(item){
+  return Array.isArray(item.series) && item.series.length > 1;
+}
+/* Abnormal flag: true (yellow) when value breaches threshold per direction; else false (blue) */
+function isAbnormal(item, value){
+  const d = item.direction;
+  const t = item.threshold;
+  if(t == null) return false;
+  if(d === "range") return value > t.high || value < t.low;
+  if(d === "below") return value < t;
+  return value > t; // default: "above"
+}
+function fmtChange(delta, unit){
+  if(Math.abs(delta) < 0.005) return "same";
+  const sign = delta > 0 ? "+" : "";
+  return `${sign}${delta.toFixed(2)}${unit}`;
+}
+
+/* =========================================================
+   4) Load all series once from precomputed data/indicators.json.
+      On missing file or read failure, use per-item sample fallbacks.
+   ========================================================= */
+async function loadAllDataInBackground(){
+  const allItems = [];
+  Object.values(DATA).forEach(cat => cat.items.forEach(it => allItems.push(it)));
+  totalCount = allItems.length;
+  updateBgStatus();
+
+  let remote = null;
+  try{
+    remote = await fetchPrecomputedData();
+  }catch(e){
+    console.warn("Failed to load precomputed data (data/indicators.json):", e.message);
+  }
+
+  allItems.forEach(item=>{
+    const pre = remote && remote.items && remote.items[item.id];
+    if(pre && pre.live && Array.isArray(pre.series) && pre.series.length > 1){
+      item.series = pre.series.slice(-MONTHS);
+      item.live = true;
+      item.fetchedAt = remote.generated_at ? new Date(remote.generated_at) : null;
+    } else {
+      item.series = item.fallback();
+      item.live = false;
+      item.fetchedAt = null;
+    }
+    loadedCount++;
+  });
+
+  updateBgStatus();
+  refreshCurrentView();
+}
+
+function updateBgStatus(){
+  const el = document.getElementById("bgStatus");
+  if(!el) return;
+  if(loadedCount < totalCount){
+    el.innerHTML = `<span class="pulse"></span>Loading data (${loadedCount}/${totalCount})`;
+  } else {
+    el.textContent = "Data loaded";
+    setTimeout(()=>{ if(loadedCount>=totalCount) el.textContent=""; }, 3000);
+  }
+}
+
+function refreshCurrentView(){
+  if(currentView === "landing") renderLanding();
+  else if(currentView === "home") renderHomeSummary();
+  else if(currentView === "category"){
+    renderSummary(currentCategory);
+    const item = DATA[currentCategory].items.find(i=>i.id===currentItemId) || DATA[currentCategory].items[0];
+    renderDetail(item);
+  }
+}
+
+/* =========================================================
+   5) View switching
+   ========================================================= */
+function showLanding(){
+  currentView = "landing";
+  document.getElementById("landingSection").style.display = "";
+  document.getElementById("homeSection").style.display = "none";
+  document.getElementById("categorySection").style.display = "none";
+  document.querySelectorAll(".nav-item").forEach(el=>el.classList.remove("active"));
+  document.getElementById("categoryLabel").textContent = "";
+  document.getElementById("iconTabs").innerHTML = "";
+  renderLanding();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function showHomeSummary(){
+  currentView = "home";
+  document.getElementById("landingSection").style.display = "none";
+  document.getElementById("homeSection").style.display = "";
+  document.getElementById("categorySection").style.display = "none";
+  document.querySelectorAll(".nav-item").forEach(el=>el.classList.remove("active"));
+  document.getElementById("categoryLabel").textContent = "Summary";
+  document.getElementById("iconTabs").innerHTML = "";
+  renderHomeSummary();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function showCategory(cat){
+  currentView = "category";
+  currentCategory = cat;
+  document.getElementById("landingSection").style.display = "none";
+  document.getElementById("homeSection").style.display = "none";
+  document.getElementById("categorySection").style.display = "";
+  document.querySelectorAll(".nav-item").forEach(el=>{
+    el.classList.toggle("active", el.dataset.cat === cat);
+  });
+  document.getElementById("categoryLabel").textContent = DATA[cat].label;
+  document.getElementById("mainHeading").textContent = DATA[cat].label;
+  document.getElementById("mainSub").textContent = DATA[cat].sub;
+  currentItemId = DATA[cat].items[0].id;
+  renderIconTabs(cat);
+  renderSummary(cat);
+  renderDetail(DATA[cat].items[0]);
+  const mainEl = document.querySelector(".main");
+  if(mainEl) mainEl.scrollTop = 0;
+  window.scrollTo({top:0, behavior:"smooth"});
+  const heading = document.getElementById("mainHeading");
+  if(heading) heading.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function goHome(){
+  showHomeSummary();
+}
+
+function goToItem(cat, itemId){
+  showCategory(cat);
+  selectItem(itemId);
+}
+
+/* =========================================================
+   6) Shared overview table renderer (landing + home)
+      - Click a row to open that item's interpretation guide
+   ========================================================= */
+function renderOverviewTable(targetElId){
+  const el = document.getElementById(targetElId);
+  let html = "";
+  Object.entries(DATA).forEach(([key, cat])=>{
+    html += `<div class="home-cat"><h3 class="home-cat-title">${cat.label}</h3>
+      <table class="summary"><thead><tr><th>Item</th><th>Current</th><th>vs Prior</th></tr></thead><tbody>`;
+    cat.items.forEach(item=>{
+      if(hasData(item)){
+        const series = item.series;
+        const cur = series[series.length-1];
+        const prev = series[series.length-2];
+        const delta = Math.round((cur-prev)*100)/100;
+        const dirClass = delta>0?"up":(delta<0?"down":"");
+        const chgText = Math.abs(delta) < 0.005 ? "same" : ((delta>0?"▲":"▼") + fmtChange(delta,item.unit));
+        const chipClass = isAbnormal(item, cur) ? "abnormal" : "normal";
+        html += `<tr onclick="goToItem('${key}','${item.id}')">
+          <td class="item-name"><span class="src-dot ${item.live?'live':'mock'}"></span>${item.name}</td>
+          <td class="item-value"><span class="value-chip ${chipClass}">${cur.toFixed(2)} ${item.unit}</span></td>
+          <td class="item-change ${dirClass}">${chgText}</td>
+        </tr>`;
+      } else {
+        html += `<tr onclick="goToItem('${key}','${item.id}')">
+          <td class="item-name">${item.name}</td>
+          <td class="item-value loading-inline">Loading…</td>
+          <td class="item-change">—</td>
+        </tr>`;
+      }
+    });
+    html += `</tbody></table></div>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderLanding(){
+  renderOverviewTable("landingBody");
+}
+
+function renderHomeSummary(){
+  renderOverviewTable("homeBody");
+}
+
+/* =========================================================
+   8) Category view rendering
+   ========================================================= */
+function renderIconTabs(cat){
+  const tabs = document.getElementById("iconTabs");
+  tabs.innerHTML = "";
+  DATA[cat].items.forEach(item=>{
+    const el = document.createElement("div");
+    el.className = "icon-tab" + (item.id === currentItemId ? " active" : "");
+    el.innerHTML = `<span class="dot"></span>${item.name}`;
+    el.onclick = ()=> selectItem(item.id);
+    tabs.appendChild(el);
+  });
+}
+
+function renderSummary(cat){
+  const body = document.getElementById("summaryBody");
+  body.innerHTML = "";
+  DATA[cat].items.forEach(item=>{
+    const tr = document.createElement("tr");
+    tr.className = item.id === currentItemId ? "selected" : "";
+    tr.onclick = ()=> selectItem(item.id);
+    if(hasData(item)){
+      const series = item.series;
+      const cur = series[series.length-1];
+      const prev = series[series.length-2];
+      const delta = Math.round((cur-prev)*100)/100;
+      const dirClass = delta > 0 ? "up" : (delta < 0 ? "down" : "");
+      const chgText = Math.abs(delta) < 0.005 ? "same" : ((delta > 0 ? "▲" : "▼") + fmtChange(delta, item.unit));
+      const chipClass = isAbnormal(item, cur) ? "abnormal" : "normal";
+      tr.innerHTML = `
+        <td class="item-name"><span class="src-dot ${item.live ? 'live' : 'mock'}" title="${item.live ? 'Server-fetched data' : 'Sample data'}"></span>${item.name}</td>
+        <td class="item-value"><span class="value-chip ${chipClass}">${cur.toFixed(2)} ${item.unit}</span></td>
+        <td class="item-change ${dirClass}">${chgText}</td>
+      `;
+    } else {
+      tr.innerHTML = `
+        <td class="item-name">${item.name}</td>
+        <td class="item-value loading-inline">Loading…</td>
+        <td class="item-change">—</td>
+      `;
+    }
+    body.appendChild(tr);
+  });
+}
+
+/* Chart.js bars — monthly release labels, ~30 points, hover shows value */
+let chartInstance = null;
+const DISPLAY_N = 30; // points shown in chart & history
+
+function seriesDateLabels(n, endYear, endMonth){
+  /* series[n-1] = endYear/endMonth (release month), series[0] = n months earlier */
+  const labels = [];
+  let y = endYear, m = endMonth;
+  for(let i = n - 1; i >= 0; i--){
+    labels[i] = { year: y, month: m, key: `${y}-${String(m).padStart(2,"0")}` };
+    m--;
+    if(m < 1){ m = 12; y--; }
+  }
+  return labels;
+}
+
+function renderChart(item){
+  const fullSeries = item.series;
+  const N = Math.min(DISPLAY_N, fullSeries.length);
+  const series = fullSeries.slice(-N);
+  const n = series.length;
+  const lastIdx = n - 1;
+
+  /* End date: by release month (adjust from fetch date if present) */
+  let endYear = 2026, endMonth = 8;
+  if(item.fetchedAt instanceof Date && !isNaN(item.fetchedAt)){
+    endYear = item.fetchedAt.getFullYear();
+    endMonth = item.fetchedAt.getMonth(); /* 0-based Jan=0 */
+    if(endMonth === 0){ endMonth = 12; endYear--; }
+    /* use calendar month as release month */
+    endMonth = item.fetchedAt.getMonth() + 1; /* 1-12 */
+    endYear = item.fetchedAt.getFullYear();
+    /* indicators typically report prior-month data → label prior month */
+    endMonth -= 1;
+    if(endMonth < 1){ endMonth = 12; endYear--; }
+  }
+  const dateLabels = seriesDateLabels(n, endYear, endMonth);
+  const labels = dateLabels.map(d => d.key);
+
+  document.getElementById("chartLabel").textContent = `Last ${n} months (by release date)`;
+
+  const canvas = document.getElementById("chartCanvas");
+  if(!canvas) return;
+  if(chartInstance){
+    chartInstance.destroy();
+    chartInstance = null;
+  }
+
+  const unit = item.unit || "";
+  const lightBlue = "rgba(47,111,237,0.45)";
+  const lightGold = "rgba(224,166,14,0.45)";
+  const lightBlueBorder = "rgba(47,111,237,0.75)";
+  const lightGoldBorder = "rgba(224,166,14,0.75)";
+  const refColor = "#E0435C";
+
+  /* Color vs threshold: light blue at/above, light gold below */
+  function barColorFor(v){
+    const t = item.threshold;
+    if(t == null) return lightBlue;
+    if(typeof t === "number") return v >= t ? lightBlue : lightGold;
+    if(typeof t === "object" && t.low != null && t.high != null){
+      if(v > t.high) return lightBlue;
+      if(v < t.low) return lightGold;
+      return lightBlue;
+    }
+    return lightBlue;
+  }
+  function barBorderFor(v){
+    const t = item.threshold;
+    if(t == null) return lightBlueBorder;
+    if(typeof t === "number") return v >= t ? lightBlueBorder : lightGoldBorder;
+    if(typeof t === "object" && t.low != null && t.high != null){
+      if(v > t.high) return lightBlueBorder;
+      if(v < t.low) return lightGoldBorder;
+      return lightBlueBorder;
+    }
+    return lightBlueBorder;
+  }
+
+  const barBg = series.map(v => barColorFor(v));
+  const barBorder = series.map(v => barBorderFor(v));
+
+  const datasets = [{
+    label: item.name + (unit ? ` (${unit})` : ""),
+    data: series,
+    backgroundColor: barBg,
+    borderColor: barBorder,
+    borderWidth: 1,
+    borderRadius: 3,
+    borderSkipped: false
+  }];
+
+  /* Y-axis: auto-fit to data + reference lines */
+  let yMin = Math.min.apply(null, series);
+  let yMax = Math.max.apply(null, series);
+  const t = item.threshold;
+  if(t != null && typeof t === "number"){
+    yMin = Math.min(yMin, t);
+    yMax = Math.max(yMax, t);
+    datasets.push({
+      type: "line",
+      label: `Threshold ${t}${unit ? unit : ""}`,
+      data: series.map(() => t),
+      borderColor: refColor,
+      backgroundColor: "transparent",
+      borderWidth: 2,
+      borderDash: [6, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      tension: 0,
+      order: 0
+    });
+  } else if(t && typeof t === "object" && t.low != null && t.high != null){
+    yMin = Math.min(yMin, t.low);
+    yMax = Math.max(yMax, t.high);
+    datasets.push({
+      type: "line",
+      label: `Lower bound ${t.low}${unit ? unit : ""}`,
+      data: series.map(() => t.low),
+      borderColor: refColor,
+      backgroundColor: "transparent",
+      borderWidth: 1.5,
+      borderDash: [4, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      tension: 0,
+      order: 0
+    });
+    datasets.push({
+      type: "line",
+      label: `Upper bound ${t.high}${unit ? unit : ""}`,
+      data: series.map(() => t.high),
+      borderColor: refColor,
+      backgroundColor: "transparent",
+      borderWidth: 1.5,
+      borderDash: [4, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      tension: 0,
+      order: 0
+    });
+  }
+  const span = yMax - yMin;
+  const pad = span > 0 ? span * 0.12 : Math.abs(yMax) * 0.1 || 1;
+  yMin = yMin - pad;
+  yMax = yMax + pad;
+
+  chartInstance = new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(20,23,26,0.92)",
+          titleFont: { size: 12 },
+          bodyFont: { size: 13, weight: "600" },
+          padding: 10,
+          displayColors: false,
+          callbacks: {
+            title: function(items){
+              return items[0] ? items[0].label : "";
+            },
+            label: function(ctx){
+              const v = ctx.parsed.y;
+              if(v == null) return "";
+              const lbl = ctx.dataset.label || "";
+              if(lbl.indexOf("Threshold") === 0 || lbl.indexOf("Lower bound") === 0 || lbl.indexOf("Upper bound") === 0){
+                return lbl + ": " + v.toFixed(2) + (unit ? " " + unit : "");
+              }
+              return v.toFixed(2) + (unit ? " " + unit : "");
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          min: yMin,
+          max: yMax,
+          title: {
+            display: true,
+            text: unit ? unit : "Value",
+            font: { size: 11 },
+            color: "#96A0AC"
+          },
+          ticks: {
+            font: { size: 11 },
+            color: "#96A0AC",
+            callback: function(v){ return typeof v === "number" ? v.toFixed(1) : v; }
+          },
+          grid: { color: "#E3E6EA" }
+        },
+        x: {
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45,
+            font: { size: 10 },
+            color: "#96A0AC",
+            autoSkip: true,
+            maxTicksLimit: 12
+          },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
+function renderHistoryTable(item){
+  const head = document.getElementById("historyHead");
+  const body = document.getElementById("historyBody");
+  const title = document.getElementById("historyTitle");
+  if(!hasData(item)){
+    head.innerHTML = "";
+    body.innerHTML = "";
+    return;
+  }
+  const fullSeries = item.series;
+  const N = Math.min(DISPLAY_N, fullSeries.length);
+  const series = fullSeries.slice(-N);
+  const n = series.length;
+
+  let endYear = 2026, endMonth = 8;
+  if(item.fetchedAt instanceof Date && !isNaN(item.fetchedAt)){
+    endYear = item.fetchedAt.getFullYear();
+    endMonth = item.fetchedAt.getMonth() + 1;
+    endMonth -= 1;
+    if(endMonth < 1){ endMonth = 12; endYear--; }
+  }
+  const dateLabels = seriesDateLabels(n, endYear, endMonth);
+
+  const histTable = body.closest("table");
+  const isRate = item.id === "fedfunds";
+  if(histTable) histTable.classList.toggle("rate-hist", isRate);
+  if(isRate){
+    title.textContent = "Decision History";
+    head.innerHTML = `<tr>
+      <th>Effective Date</th><th>Lower</th><th>Upper</th><th>Change</th>
+    </tr>`;
+    let rows = "";
+    for(let i = n - 1; i >= 0; i--){
+      const cur = series[i];
+      const prev = i > 0 ? series[i-1] : cur;
+      const delta = Math.round((cur - prev) * 100) / 100;
+      const upper = cur;
+      const lower = Math.round((cur - 0.25) * 100) / 100;
+      let chgText, chgClass = "";
+      if(Math.abs(delta) < 0.01){
+        chgText = "same";
+      } else if(delta > 0){
+        chgText = `+${delta.toFixed(2)}`; chgClass = "up";
+      } else {
+        chgText = delta.toFixed(2); chgClass = "down";
+      }
+      rows += `<tr>
+        <td class="hist-period">${dateLabels[i].key}</td>
+        <td class="hist-val">${lower.toFixed(2)}%</td>
+        <td class="hist-val">${upper.toFixed(2)}%</td>
+        <td class="hist-chg ${chgClass}">${chgText}</td>
+      </tr>`;
+    }
+    body.innerHTML = rows;
+  } else {
+    title.textContent = "Recent Path (Monthly · by release)";
+    head.innerHTML = `<tr>
+      <th>Period</th><th>Value</th><th>vs Prior</th>
+    </tr>`;
+    let rows = "";
+    for(let i = n - 1; i >= 0; i--){
+      const cur = series[i];
+      const prev = i > 0 ? series[i-1] : cur;
+      const delta = Math.round((cur - prev) * 100) / 100;
+      const dirClass = delta > 0 ? "up" : (delta < 0 ? "down" : "");
+      const chgText = Math.abs(delta) < 0.005
+        ? "same"
+        : ((delta > 0 ? "▲" : "▼") + fmtChange(delta, item.unit || ""));
+      const periodLabel = i === n - 1
+        ? `<strong>${dateLabels[i].key} (latest)</strong>`
+        : dateLabels[i].key;
+      rows += `<tr>
+        <td class="hist-period">${periodLabel}</td>
+        <td class="hist-val">${cur.toFixed(2)}${item.unit ? " " + item.unit : ""}</td>
+        <td class="hist-chg ${dirClass}">${chgText}</td>
+      </tr>`;
+    }
+    body.innerHTML = rows;
+  }
+}
+
+function renderDetail(item){
+  document.getElementById("detailName").textContent = item.name;
+  const badge = document.getElementById("liveBadge");
+  const chartSection = document.getElementById("chartSection");
+
+  if(hasData(item)){
+    const series = item.series;
+    const cur = series[series.length-1];
+    const chipClass = isAbnormal(item, cur) ? "abnormal" : "normal";
+    document.getElementById("detailValue").innerHTML = `Current <span class="value-chip ${chipClass}">${cur.toFixed(2)} ${item.unit}</span>`;
+    badge.textContent = item.live ? "🟢 Latest fetched data" : "⚪ Sample data (fetch failed)";
+    badge.className = "live-badge " + (item.live ? "live" : "mock");
+    document.getElementById("updatedAt").textContent = item.live && item.fetchedAt
+      ? `Last updated: ${item.fetchedAt.toLocaleString("en-US")}`
+      : "Server fetch failed for this item; sample data is shown.";
+    chartSection.style.display = "";
+    renderChart(item);
+    renderHistoryTable(item);
+  } else {
+    document.getElementById("detailValue").textContent = "Current Loading…";
+    badge.textContent = "⏳ Loading";
+    badge.className = "live-badge mock";
+    document.getElementById("updatedAt").textContent = "Loading data in the background.";
+    chartSection.style.display = "none";
+  }
+  document.getElementById("detailInterpret").textContent = item.interpret;
+}
+
+function selectItem(itemId){
+  currentItemId = itemId;
+  const item = DATA[currentCategory].items.find(i=>i.id===itemId);
+  renderIconTabs(currentCategory);
+  renderSummary(currentCategory);
+  renderDetail(item);
+}
+
+
+/* =========================================================
+   9) Init — paint UI immediately, load data in background
+   ========================================================= */
+(function init(){
+  showLanding();
+  loadAllDataInBackground();
+})();
+</script>
+</body>
+</html>
