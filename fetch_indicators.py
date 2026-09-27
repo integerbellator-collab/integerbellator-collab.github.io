@@ -37,9 +37,11 @@ def fetch_yahoo_series(symbol: str, range_: str = "5y", interval: str = "1mo") -
 
 
 def fetch_yahoo_yield(symbol: str) -> list[float]:
-    """CBOE 수익률 지수(^TNX 등)는 실제 수익률의 10배로 고시됨."""
+    """Yahoo ^TNX / ^IRX etc. now return the yield in percent directly
+    (e.g. 5.18 for 5.18%). Older feeds used 10x scaling; do not divide.
+    """
     raw = fetch_yahoo_series(symbol)
-    return [round(v / 10, 2) for v in raw]
+    return [round(v, 2) for v in raw]
 
 
 # ---------------------------------------------------------------------------
@@ -66,10 +68,24 @@ def fetch_fred_series(series_id: str) -> list[tuple[str, float]]:
 
 
 def to_yoy(points: list[tuple[str, float]]) -> list[float]:
+    """Year-over-year % change matched by calendar month (YYYY-MM),
+    not by fixed index offset. Handles missing months (e.g. Oct 2025
+    shutdown gap) so Aug 2026 is compared to Aug 2025, not to some
+    other month 12 observations earlier.
+    """
+    by_month: dict[str, float] = {}
+    for date, v in points:
+        by_month[date[:7]] = v  # "YYYY-MM"
+
+    months = sorted(by_month.keys())
     out: list[float] = []
-    for i in range(12, len(points)):
-        prev_v = points[i - 12][1]
-        cur_v = points[i][1]
+    for m in months:
+        y, mo = int(m[:4]), int(m[5:7])
+        prev_key = f"{y - 1}-{mo:02d}"
+        if prev_key not in by_month:
+            continue
+        prev_v = by_month[prev_key]
+        cur_v = by_month[m]
         if prev_v == 0:
             continue
         out.append(round((cur_v - prev_v) / prev_v * 100, 2))
@@ -108,8 +124,24 @@ def fetch_mom_change(series_id: str) -> list[float]:
 # 복합 지표
 # ---------------------------------------------------------------------------
 def fetch_buffett_indicator() -> list[float]:
-    """윌셔5000 / 명목 GDP * 100 (근사). GDP는 분기값이므로 forward-fill."""
-    wilshire = fetch_fred_series("WILL5000PRFC")
+    """윌셔5000 / 명목 GDP * 100 (근사).
+    Wilshire from Yahoo ^W5000 (FRED WILL5000PRFC discontinued);
+    GDP from FRED, forward-filled across months.
+    """
+    # Monthly closes from Yahoo
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/^W5000"
+    r = requests.get(url, params={"range": "5y", "interval": "1mo"}, headers=HEADERS, timeout=20)
+    r.raise_for_status()
+    result = r.json()["chart"]["result"][0]
+    timestamps = result["timestamp"]
+    closes = result["indicators"]["quote"][0]["close"]
+    wilshire: list[tuple[str, float]] = []
+    for ts, c in zip(timestamps, closes):
+        if c is None:
+            continue
+        date = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+        wilshire.append((date, float(c)))
+
     gdp = sorted(fetch_fred_series("GDP"), key=lambda p: p[0])
     gdp_dates = [d for d, _ in gdp]
     gdp_vals = [v for _, v in gdp]
@@ -161,9 +193,9 @@ def fetch_nasdaq_rsi() -> list[float]:
 ITEMS: dict[str, tuple] = {
     # 기준금리 — 연준 목표 상단 (DFEDTARU), 없으면 실효금리(FEDFUNDS)
     "fedfunds": (lambda: fetch_monthly_from_fred_direct("DFEDTARU") or fetch_monthly_from_fred_direct("FEDFUNDS"), MONTHS),
-    # 물가
-    "us_cpi": (lambda: fetch_yoy_from_fred("CPIAUCSL"), MONTHS),
-    "core_cpi": (lambda: fetch_yoy_from_fred("CPILFESL"), MONTHS),
+    # 물가 — NSA (not seasonally adjusted) to match BLS official YoY prints
+    "us_cpi": (lambda: fetch_yoy_from_fred("CPIAUCNS"), MONTHS),
+    "core_cpi": (lambda: fetch_yoy_from_fred("CPILFENS"), MONTHS),
     "pce_headline": (lambda: fetch_yoy_from_fred("PCEPI"), MONTHS),
     "pce_core": (lambda: fetch_yoy_from_fred("PCEPILFE"), MONTHS),
     "ppi_headline": (lambda: fetch_yoy_from_fred("PPIFIS"), MONTHS),

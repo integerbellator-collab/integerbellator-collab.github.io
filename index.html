@@ -449,6 +449,35 @@ function genSeries(seed, start, driftPerStep, volatility, months){
 }
 const MONTHS = 36; // ~3 years monthly — chart/history show last 30
 
+
+/* FOMC decision history — dates in Korean time (2:00 PM ET → ~03:00 next day KST).
+   upper/lower = target range. Newest first. Update after each FOMC meeting. */
+const FOMC_DECISIONS = [
+  { date: "2026-09-17", upper: 4.00, lower: 3.75, change: 0.25 },
+  { date: "2026-07-30", upper: 3.75, lower: 3.50, change: 0 },
+  { date: "2026-06-18", upper: 3.75, lower: 3.50, change: 0 },
+  { date: "2026-04-30", upper: 3.75, lower: 3.50, change: 0 },
+  { date: "2026-03-19", upper: 3.75, lower: 3.50, change: 0 },
+  { date: "2026-01-29", upper: 3.75, lower: 3.50, change: 0 },
+  { date: "2025-12-11", upper: 3.75, lower: 3.50, change: -0.25 },
+  { date: "2025-10-30", upper: 4.00, lower: 3.75, change: -0.25 },
+  { date: "2025-09-18", upper: 4.25, lower: 4.00, change: -0.25 },
+  { date: "2025-07-31", upper: 4.50, lower: 4.25, change: 0 },
+  { date: "2025-06-19", upper: 4.50, lower: 4.25, change: 0 },
+  { date: "2025-05-08", upper: 4.50, lower: 4.25, change: 0 },
+  { date: "2025-03-20", upper: 4.50, lower: 4.25, change: 0 },
+  { date: "2025-01-30", upper: 4.50, lower: 4.25, change: 0 },
+  { date: "2024-12-19", upper: 4.50, lower: 4.25, change: -0.25 },
+  { date: "2024-11-08", upper: 4.75, lower: 4.50, change: -0.25 },
+  { date: "2024-09-19", upper: 5.00, lower: 4.75, change: -0.50 },
+  { date: "2024-08-01", upper: 5.50, lower: 5.25, change: 0 },
+  { date: "2024-06-13", upper: 5.50, lower: 5.25, change: 0 },
+  { date: "2024-05-02", upper: 5.50, lower: 5.25, change: 0 },
+  { date: "2024-03-21", upper: 5.50, lower: 5.25, change: 0 },
+  { date: "2024-02-01", upper: 5.50, lower: 5.25, change: 0 },
+];
+
+
 /* =========================================================
    2) Data source: single precomputed file written daily by the server
       (GitHub Actions) — data/indicators.json
@@ -1133,31 +1162,59 @@ function renderHistoryTable(item){
   const isRate = item.id === "fedfunds";
   if(histTable) histTable.classList.toggle("rate-hist", isRate);
   if(isRate){
-    title.textContent = "Decision History";
+    title.textContent = "Decision History (FOMC Announcement)";
     head.innerHTML = `<tr>
-      <th>Effective Date</th><th>Lower</th><th>Upper</th><th>Change</th>
+      <th>Announcement Date</th><th>Lower</th><th>Upper</th><th>Change</th>
     </tr>`;
     let rows = "";
-    for(let i = n - 1; i >= 0; i--){
-      const cur = series[i];
-      const prev = i > 0 ? series[i-1] : cur;
-      const delta = Math.round((cur - prev) * 100) / 100;
-      const upper = cur;
-      const lower = Math.round((cur - 0.25) * 100) / 100;
-      let chgText, chgClass = "";
-      if(Math.abs(delta) < 0.01){
-        chgText = "same";
-      } else if(delta > 0){
-        chgText = `+${delta.toFixed(2)}`; chgClass = "up";
-      } else {
-        chgText = delta.toFixed(2); chgClass = "down";
+    const decisions = (typeof FOMC_DECISIONS !== "undefined" && FOMC_DECISIONS.length)
+      ? FOMC_DECISIONS
+      : [];
+    if(decisions.length){
+      decisions.forEach((d, idx) => {
+        const upper = d.upper;
+        const lower = d.lower != null ? d.lower : Math.round((upper - 0.25) * 100) / 100;
+        const delta = d.change != null ? d.change : 0;
+        let chgText, chgClass = "";
+        if(Math.abs(delta) < 0.01){
+          chgText = "same";
+        } else if(delta > 0){
+          chgText = `+${delta.toFixed(2)}`; chgClass = "up";
+        } else {
+          chgText = delta.toFixed(2); chgClass = "down";
+        }
+        const dateLabel = idx === 0
+          ? `<strong>${d.date} (latest)</strong>`
+          : d.date;
+        rows += `<tr>
+          <td class="hist-period">${dateLabel}</td>
+          <td class="hist-val">${lower.toFixed(2)}%</td>
+          <td class="hist-val">${upper.toFixed(2)}%</td>
+          <td class="hist-chg ${chgClass}">${chgText}</td>
+        </tr>`;
+      });
+    } else {
+      for(let i = n - 1; i >= 0; i--){
+        const cur = series[i];
+        const prev = i > 0 ? series[i-1] : cur;
+        const delta = Math.round((cur - prev) * 100) / 100;
+        const upper = cur;
+        const lower = Math.round((cur - 0.25) * 100) / 100;
+        let chgText, chgClass = "";
+        if(Math.abs(delta) < 0.01){
+          chgText = "same";
+        } else if(delta > 0){
+          chgText = `+${delta.toFixed(2)}`; chgClass = "up";
+        } else {
+          chgText = delta.toFixed(2); chgClass = "down";
+        }
+        rows += `<tr>
+          <td class="hist-period">${dateLabels[i].key}</td>
+          <td class="hist-val">${lower.toFixed(2)}%</td>
+          <td class="hist-val">${upper.toFixed(2)}%</td>
+          <td class="hist-chg ${chgClass}">${chgText}</td>
+        </tr>`;
       }
-      rows += `<tr>
-        <td class="hist-period">${dateLabels[i].key}</td>
-        <td class="hist-val">${lower.toFixed(2)}%</td>
-        <td class="hist-val">${upper.toFixed(2)}%</td>
-        <td class="hist-chg ${chgClass}">${chgText}</td>
-      </tr>`;
     }
     body.innerHTML = rows;
   } else {
